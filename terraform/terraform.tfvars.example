@@ -1,0 +1,11 @@
+# AWS Configuration
+aws_region   = "us-east-1"
+project_name = "devops-app"
+environment  = "production"
+
+# EC2 Config
+instance_type = "t2.micro" # Free Tier eligible
+key_name      = "my-aws-ssh-key" # Replace with your existing EC2 Key Pair name
+
+# S3 Config
+s3_bucket_name = "devops-assignment-assets"

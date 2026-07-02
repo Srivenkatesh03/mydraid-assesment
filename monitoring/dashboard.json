@@ -1,0 +1,88 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/EC2", "CPUUtilization", "InstanceId", "${INSTANCE_ID}" ]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "${AWS_REGION}",
+        "title": "EC2 CPU Utilization (%)",
+        "view": "timeSeries",
+        "stacked": false,
+        "yAxis": {
+          "left": {
+            "max": 100,
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "CWAgent", "mem_used_percent", "InstanceId", "${INSTANCE_ID}" ]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "${AWS_REGION}",
+        "title": "CWAgent Memory Utilization (%)",
+        "view": "timeSeries",
+        "stacked": false,
+        "yAxis": {
+          "left": {
+            "max": 100,
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "CWAgent", "used_percent", "InstanceId", "${INSTANCE_ID}", "device", "xvda1", "fstype", "ext4", "path", "/" ]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "${AWS_REGION}",
+        "title": "Disk Space Utilization (%)",
+        "view": "timeSeries",
+        "stacked": false,
+        "yAxis": {
+          "left": {
+            "max": 100,
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "log",
+      "x": 12,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE 'DevOps-App-Logs' | fields @timestamp, @message | sort @timestamp desc | limit 20",
+        "region": "${AWS_REGION}",
+        "title": "Recent Application Logs"
+      }
+    }
+  ]
+}

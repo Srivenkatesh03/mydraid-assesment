@@ -1,0 +1,20 @@
+# Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+venv/
+
+# Application logs & local mock storage
+app/app.log
+load-testing/server.log
+load-testing/server_log/
+s3_mock/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraform.lock.hcl

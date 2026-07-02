@@ -1,0 +1,137 @@
+name: CI/CD Pipeline - Build and Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    name: Run Unit Tests & Linting
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest httpx fastapi uvicorn jinja2 python-multipart psutil boto3
+
+    - name: Run Linter (flake8)
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings.
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Run pytest Unit Tests
+      run: |
+        cd app
+        python -m pytest test_main.py -v
+
+    - name: Build Docker Image (Dry Run)
+      run: |
+        docker build -t devops-app:latest ./app
+
+  deploy:
+    name: Deploy to AWS EC2
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up SSH Key & Deploy
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+        HOST: ${{ secrets.EC2_HOST }}
+        USERNAME: ${{ secrets.EC2_USERNAME }}
+      run: |
+        # Setup SSH Agent
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+        # SSH into EC2 and pull latest code, build, and restart container
+        ssh -i ~/.ssh/id_rsa "$USERNAME@$HOST" << 'EOF'
+          set -e
+          
+          # Navigate to project folder
+          cd /opt/devops-app
+          
+          # Pull latest from Git
+          # (Assumes git is initialized and authenticated, or code was rsync'd)
+          # Alternatively, we can use SCP/rsync to push the app files from the runner:
+        EOF
+
+    - name: Transfer Files to EC2 via Rsync
+      uses: easingthemes/ssh-deploy@main
+      with:
+        SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+        REMOTE_HOST: ${{ secrets.EC2_HOST }}
+        REMOTE_USER: ${{ secrets.EC2_USERNAME }}
+        TARGET: /opt/devops-app
+        SOURCE: "app/"
+        EXCLUDE: "/venv/, /s3_mock/, __pycache__, .git"
+
+    - name: Restart Application on EC2
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+        HOST: ${{ secrets.EC2_HOST }}
+        USERNAME: ${{ secrets.EC2_USERNAME }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+        ssh -i ~/.ssh/id_rsa "$USERNAME@$HOST" << 'EOF'
+          set -e
+          cd /opt/devops-app
+          
+          # Check if systemd service exists, if not create it
+          if [ ! -f /etc/systemd/system/fastapi.service ]; then
+            sudo bash -c 'cat << "SYSTEMD" > /etc/systemd/system/fastapi.service
+            [Unit]
+            Description=FastAPI Web Application
+            After=network.target
+
+            [Service]
+            User=root
+            WorkingDirectory=/opt/devops-app
+            ExecStart=/opt/devops-app/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+            Restart=always
+            EnvironmentFile=/etc/environment
+
+            [Install]
+            WantedBy=multi-user.target
+            SYSTEMD'
+            
+            sudo systemctl daemon-reload
+            sudo systemctl enable fastapi
+          fi
+
+          # Install/upgrade dependencies inside virtualenv
+          sudo /opt/devops-app/venv/bin/pip install -r requirements.txt
+
+          # Restart application service
+          sudo systemctl restart fastapi
+          sudo systemctl restart nginx
+          
+          # Verify application is serving requests locally
+          sleep 3
+          curl -f http://127.0.0.1/api/v1/health
+          echo "Deployment successful!"
+        EOF
