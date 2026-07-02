@@ -108,7 +108,7 @@ To verify the boot status:
    - Check FastAPI systemd status: `sudo systemctl status fastapi`
    - Check Nginx status: `sudo systemctl status nginx`
    - Check CloudWatch Agent status:
-     ```bash
+     ```bash 
      sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
      ```
 
