@@ -397,6 +397,9 @@ resource "aws_instance" "app_server" {
                 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
                 -s
 
+              # Change ownership of the app directory to ubuntu so CI/CD rsync deployments do not fail with Permission Denied
+              chown -R ubuntu:ubuntu /opt/devops-app
+
               EOF
 
   tags = {
