@@ -259,7 +259,7 @@ resource "aws_instance" "app_server" {
     volume_type           = "gp3"
     encrypted             = true
     delete_on_termination = true
-  }
+  } 
 
   # User data to bootstrap EC2 Server
   user_data = <<-EOF
