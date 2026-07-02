@@ -108,12 +108,15 @@ async def dashboard(request: Request):
         "s3_bucket_name": S3_BUCKET or "N/A (Local Mocking Active)"
     }
 
-    return templates.TemplateResponse("index.html", {
-        "request": request, 
-        "metrics": metrics, 
-        "items": list(items_db.values()),
-        "files": files
-    })
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "metrics": metrics,
+            "items": list(items_db.values()),
+            "files": files
+        }
+    )
 
 # API Endpoints
 @app.get("/api/v1/health")
